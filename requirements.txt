@@ -1,0 +1,12 @@
+torch>=2.0.0
+e3nn>=0.5.1,<0.6
+torch-geometric>=2.3.0
+pymatgen>=2023.10.11
+ase>=3.22.1
+matplotlib>=3.7.0
+pandas>=2.0.0
+scikit-learn>=1.2.0
+jupyter>=1.0.0
+tqdm>=4.65.0
+mp-api>=0.33.3
+python-dotenv>=1.0.0
