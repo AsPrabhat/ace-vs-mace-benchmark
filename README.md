@@ -7,7 +7,8 @@ This repository contains an empirical comparison between the **ACE (Atomic Clust
 To ensure a fair mathematical and computational comparison, both models are trained on the exact same dataset subset using identical hyperparameters:
 
 - **Cutoff Radius**: 5.0 Å
-- **Maximum Body Order (Correlation order $\nu$)**: 3 (4-body interactions)
+- **ACE Body Order (Correlation order $\nu$)**: 2 (3-body interactions)
+- **MACE Blocks**: 2 layers of message passing
 - **Maximum Angular Momentum ($l_{max}$)**: 2
 - **Batch Size**: 32 (or adjusted based on VRAM)
 - **Optimizer**: AdamW
@@ -23,7 +24,7 @@ To ensure a fair mathematical and computational comparison, both models are trai
 ace-vs-mace-benchmark/
 ├── README.md                      # Comprehensive guide on how to run the project
 ├── requirements.txt               # Dependencies
-├── data/                          # Subset of the Materials Project dataset
+├── data/                          # Cu Molecular Dynamics (MD) trajectory dataset
 ├── src/                           # Modular Python scripts for datasets, model wrappers, and training
 │   ├── dataset.py                 # PyTorch DataLoader for CIFs
 │   ├── models/                    # Fully self-contained local ACE and MACE implementations

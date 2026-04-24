@@ -18,6 +18,7 @@ class ACEWrapper(nn.Module):
 
     def __init__(
         self,
+        num_elements: int = 120,
         num_radial: int = 8,
         l_max: int = 3,
         r_cut: float = 5.0,
@@ -25,7 +26,7 @@ class ACEWrapper(nn.Module):
     ):
         super().__init__()
         self.model = ACEPotential(
-            num_radial=num_radial, l_max=l_max, r_cut=r_cut, hidden_dim=hidden_dim
+            num_elements=num_elements, num_radial=num_radial, l_max=l_max, r_cut=r_cut, hidden_dim=hidden_dim
         )
 
     def forward(self, data) -> dict:
@@ -47,7 +48,7 @@ class ACEWrapper(nn.Module):
         num_nodes = data.num_nodes
         batch_indices = data.batch if hasattr(data, "batch") and data.batch is not None else None
 
-        total_energy = self.model(vectors, data.edge_index, num_nodes, batch_indices)
+        total_energy = self.model(vectors, data.edge_index, data.z, num_nodes, batch_indices)
 
         # Forces: F_i = -dE/dR_i
         forces = -torch.autograd.grad(
