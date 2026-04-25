@@ -56,24 +56,22 @@ Follow these steps to set up the environment and run the benchmark from scratch.
 
 ### 1. Environment Setup
 
-It is highly recommended to use a virtual environment to manage dependencies and avoid conflicts.
+It is highly recommended to use **`uv`**, an extremely fast Python package manager, to manage the environment. `uv` will automatically handle fetching the correct Python version needed for PyTorch CUDA support.
 
-**Using Python `venv` (Windows/PowerShell):**
+**Using uv (Windows/macOS/Linux):**
 ```powershell
-# Create a virtual environment named 'venv'
-python -m venv venv
+# 1. Create a virtual environment using Python 3.11 (uv will download it automatically if missing)
+uv venv --python 3.11
 
-# Activate the virtual environment
-.\venv\Scripts\Activate.ps1
+# 2. Activate the virtual environment
+# On Windows:
+.\.venv\Scripts\activate
+# On Linux/macOS:
+# source .venv/bin/activate
 
-# Upgrade pip (optional but recommended)
-python -m pip install --upgrade pip
-
-# Install required dependencies
-pip install -r requirements.txt
+# 3. Install PyTorch with CUDA and all other dependencies
+uv pip install -r requirements.txt
 ```
-
-*(If you are on Linux/macOS, activate using `source venv/bin/activate` instead).*
 
 ### 2. Launching the Benchmark
 
