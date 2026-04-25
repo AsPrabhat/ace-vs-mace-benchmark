@@ -4,29 +4,41 @@
 This repository contains an empirical comparison between the **ACE (Atomic Cluster Expansion)** and **MACE (Message Passing ACE)** interatomic potential frameworks. The goal is to evaluate the tradeoff between the computational speed of the strictly local ACE model and the increased accuracy provided by the multi-layer graph neural network approach in MACE. 
 
 ## Experimental Setup
-To ensure a fair mathematical and computational comparison, both models are trained on the exact same dataset subset using identical hyperparameters:
+Both models are trained on the exact same train/validation/test dataset split.
 
-- **Cutoff Radius**: 5.0 Å
-- **ACE Body Order (Correlation order $\nu$)**: 2 (3-body interactions)
-- **MACE Blocks**: 2 layers of message passing
-- **Maximum Angular Momentum ($l_{max}$)**: 2
-- **Batch Size**: 32 (or adjusted based on VRAM)
-- **Optimizer**: AdamW
-- **LR Schedule**: ReduceLROnPlateau
+The benchmark uses a shared training setup and model-specific architecture parameters:
+
+- **Shared Training Setup**
+    - Cutoff Radius: 5.0 A
+    - Radial Basis Size: 8
+    - Maximum Angular Momentum (l_max): 2
+    - Batch Size: 32
+    - Optimizer: AdamW (lr=1e-3, weight_decay=1e-5)
+    - LR Schedule: ReduceLROnPlateau (factor=0.5, patience=5)
+    - Trainer Schedule: max_epochs=50, early_stopping_patience=10
+    - Loss Weights: energy_weight=1.0, force_weight=100.0
+
+- **Model-Specific Architecture**
+    - ACE: hidden_dim=32
+    - MACE: node_dim=16, num_blocks=2
+
+This repository does not require external API keys for the default workflow.
 
 ### Metrics Tracked
-1. **Accuracy**: Energy MAE (meV/atom) and Force MAE (meV/Å).
-2. **Computational Speed**: Wall-clock time per epoch (seconds/epoch).
-3. **Data Efficiency & Total Time**: Total time to convergence.
+1. **Training/Validation Accuracy**: Energy MAE (meV/atom) and Force MAE (meV/A).
+2. **Held-Out Test Accuracy**: Test Energy MAE and Test Force MAE from the test split.
+3. **Computational Speed**: Wall-clock time per epoch and total training time.
+4. **Optimization Metrics**: Weighted train/validation losses saved per epoch.
 
 ## Directory Structure
 ```
 ace-vs-mace-benchmark/
 ├── README.md                      # Comprehensive guide on how to run the project
 ├── requirements.txt               # Dependencies
+├── .env.example                   # Optional external API keys (not required by default)
 ├── data/                          # Cu Molecular Dynamics (MD) trajectory dataset
 ├── src/                           # Modular Python scripts for datasets, model wrappers, and training
-│   ├── dataset.py                 # PyTorch DataLoader for CIFs
+│   ├── dataset.py                 # PyTorch Geometric dataset for extxyz trajectories
 │   ├── models/                    # Fully self-contained local ACE and MACE implementations
 │   └── trainer.py                 # Unified training loop
 └── notebooks/                     # Core workflow
@@ -77,14 +89,14 @@ This will open your default web browser. Navigate to the `notebooks/` directory 
 
 Run the notebooks sequentially to execute the benchmark:
 
-- **`01_Data_Preparation.ipynb`**: Run this first. It will generate (or fetch) the structural data, assign energies and forces, and securely split it into 1000 training, 200 validation, and 200 testing samples. The outputs are saved as `.extxyz` files in the `data/` directory.
-- **`02_ACE_Training.ipynb`**: This notebook initializes the local ACE model and executes the `BenchmarkTrainer`. It will log validation metrics for every epoch and save the final metrics to `data/ace_metrics.csv`.
-- **`03_MACE_Training.ipynb`**: This notebook initializes the message-passing MACE model and runs it through the exact same `BenchmarkTrainer`. It saves the final metrics to `data/mace_metrics.csv`.
-- **`04_Results_Comparison.ipynb`**: Run this last. It reads the CSV logs from both models and generates beautiful side-by-side plots for Energy MAE, Force MAE, and Time per epoch.
+- **`01_Data_Preparation.ipynb`**: Run this first. It generates Cu MD trajectory data with energies and forces and splits it into 1000 train, 200 validation, and 200 test structures in `.extxyz` format.
+- **`02_ACE_Training.ipynb`**: Trains ACE, writes per-epoch metrics to `data/ace_metrics.csv`, and writes held-out test metrics to `data/ace_test_metrics.csv`.
+- **`03_MACE_Training.ipynb`**: Trains MACE, writes per-epoch metrics to `data/mace_metrics.csv`, and writes held-out test metrics to `data/mace_test_metrics.csv`.
+- **`04_Results_Comparison.ipynb`**: Reads train/validation and test CSV outputs and compares validation curves, wall-clock time, and held-out test metrics.
 
 ### 🚀 Performance Tips
 - **Graph Caching**: The dataset pre-computes periodic neighbor graphs once at startup. You will see a progress bar during initialization; this saves minutes of redundant computation during training.
-- **CPU Benchmarking**: We use `l_max=2` by default. Equivariant models (MACE) are computationally intensive; for 1000 structures on a modern CPU, expect ~30-40s per epoch.
+- **Runtime Expectations**: MACE is significantly more expensive per epoch than ACE. Use the generated `time` columns in metrics CSVs as the canonical measurement for your hardware.
 
 ### Hardware Notes
-If you are running this on a GPU-enabled machine, PyTorch will automatically utilize CUDA to speed up the tensor operations. Due to the message-passing overhead, you should clearly see MACE taking longer per epoch while achieving lower validation errors compared to the strictly local ACE!
+If you are running on a GPU-enabled machine, PyTorch can utilize CUDA to accelerate tensor operations. Because MACE includes message-passing blocks, it is expected to run slower per epoch than ACE at similar dataset sizes.
