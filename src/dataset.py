@@ -1,3 +1,4 @@
+import os
 import torch
 from torch.utils.data import Dataset
 from torch_geometric.data import Data
@@ -38,7 +39,7 @@ def ase_radius_graph(atoms, cutoff: float):
     return edge_index, edge_shift
 
 
-def _atoms_to_data(atoms, cutoff: float) -> Data:
+def _atoms_to_data(atoms, cutoff: float, include_labels: bool = True) -> Data:
     """Convert one ASE Atoms object to a PyG Data object."""
     z = torch.tensor(atoms.get_atomic_numbers(), dtype=torch.long)
     pos = torch.tensor(atoms.get_positions(), dtype=torch.float32)
@@ -49,26 +50,21 @@ def _atoms_to_data(atoms, cutoff: float) -> Data:
 
     data = Data(z=z, pos=pos, edge_index=edge_index, edge_shift=edge_shift)
 
-    # Energy — read from the SinglePointCalculator (atoms.info is dropped by extxyz)
-    try:
+    if include_labels:
+        # Energy and forces must be carried by a SinglePointCalculator when
+        # writing extxyz. Validate/fail-fast in dataset init so training does
+        # not fail late during epoch execution.
         energy = atoms.get_potential_energy()
         data.y = torch.tensor([[energy]], dtype=torch.float32)
-    except Exception:
-        pass  # y stays None; trainer will raise a clear error
-
-    # Forces — similarly from the calculator
-    try:
         forces = atoms.get_forces()
         data.forces = torch.tensor(forces, dtype=torch.float32)
-    except Exception:
-        pass
 
     return data
 
 
-class MaterialsProjectDataset(Dataset):
+class MDTrajectoryDataset(Dataset):
     """
-    Dataset for loading Materials Project structures and converting them
+    Dataset for loading ASE extxyz trajectory structures and converting them
     to uniform PyTorch Geometric Data objects suitable for BOTH ACE and MACE.
 
     Performance:
@@ -94,9 +90,10 @@ class MaterialsProjectDataset(Dataset):
         forces     : (num_nodes, 3)    DFT forces (eV/Å)  [if available]
     """
 
-    def __init__(self, filepath: str, cutoff: float = 5.0):
+    def __init__(self, filepath: str, cutoff: float = 5.0, require_labels: bool = True):
         super().__init__()
         self.cutoff = cutoff
+        self.require_labels = require_labels
 
         if filepath.endswith(".json"):
             raise NotImplementedError(
@@ -104,17 +101,56 @@ class MaterialsProjectDataset(Dataset):
                 "Save your data as an extxyz file via notebook 01_Data_Preparation.ipynb."
             )
 
-        # Read all structures from file
-        atoms_list = read(filepath, index=":")
+        if not os.path.isfile(filepath):
+            raise FileNotFoundError(f"Dataset file not found: {filepath}")
+
+        # Read all structures from file with explicit parse errors.
+        try:
+            atoms_list = read(filepath, index=":")
+        except Exception as exc:
+            raise RuntimeError(f"Failed to parse extxyz file '{filepath}': {exc}") from exc
+
+        if not isinstance(atoms_list, list):
+            atoms_list = [atoms_list]
+
+        if len(atoms_list) == 0:
+            raise ValueError(f"No structures found in dataset file: {filepath}")
+
+        if self.require_labels:
+            missing_energy = []
+            missing_forces = []
+            for idx, atoms in enumerate(atoms_list):
+                try:
+                    atoms.get_potential_energy()
+                except Exception:
+                    missing_energy.append(idx)
+                try:
+                    atoms.get_forces()
+                except Exception:
+                    missing_forces.append(idx)
+
+            if missing_energy or missing_forces:
+                sample_energy = missing_energy[:8]
+                sample_forces = missing_forces[:8]
+                raise ValueError(
+                    "Missing labels in extxyz dataset. "
+                    f"Structures missing energy: {len(missing_energy)} (sample indices: {sample_energy}); "
+                    f"structures missing forces: {len(missing_forces)} (sample indices: {sample_forces}). "
+                    "Make sure SinglePointCalculator with energy/forces is attached before writing extxyz."
+                )
 
         # Pre-build and cache ALL Data objects up front.
         # ASE's neighbor_list is slow Python (~3 ms/structure); running it once
         # here instead of on every __getitem__ call saves minutes per training run.
         print(f"Pre-computing graphs for {len(atoms_list)} structures (cutoff={cutoff} Å)...")
-        self.data_list = [
-            _atoms_to_data(atoms, cutoff)
-            for atoms in tqdm(atoms_list, desc="Building graphs", leave=False)
-        ]
+        self.data_list = []
+        for idx, atoms in enumerate(tqdm(atoms_list, desc="Building graphs", leave=False)):
+            try:
+                self.data_list.append(_atoms_to_data(atoms, cutoff, include_labels=self.require_labels))
+            except Exception as exc:
+                raise RuntimeError(
+                    f"Failed to convert structure index {idx} from '{filepath}' to PyG Data: {exc}"
+                ) from exc
         print(f"  Done. Dataset ready ({len(self.data_list)} graphs).")
 
     def __len__(self):

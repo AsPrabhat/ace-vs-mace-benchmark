@@ -2,7 +2,6 @@ import torch
 import torch.nn as nn
 from e3nn import o3
 from torch_geometric.data import Data
-from torch_geometric.utils import scatter
 
 from .basis import BesselBasis, SphericalHarmonicsBasis
 from .blocks import SimpleMACEBlock

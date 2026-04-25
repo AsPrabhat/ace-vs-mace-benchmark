@@ -1,8 +1,8 @@
 import time
 import torch
 import torch.nn as nn
-from tqdm.auto import tqdm
 import pandas as pd
+from torch_geometric.data import Data
 
 
 class BenchmarkTrainer:
@@ -34,7 +34,7 @@ class BenchmarkTrainer:
 
         self.metrics = []
 
-    def _compute_loss_and_metrics(self, batch):
+    def _compute_loss_and_metrics(self, batch: Data):
         batch = batch.to(self.device)
         preds = self.model(batch)
 
@@ -117,27 +117,33 @@ class BenchmarkTrainer:
             "time": end_time - start_time,
         }
 
-    # NOTE: No @torch.no_grad() here — both ACE and MACE compute forces via
-    # torch.autograd.grad() inside their forward() pass, which requires the
-    # autograd graph to remain live even during validation.
-    def validate_epoch(self):
+    # NOTE: We intentionally avoid @torch.no_grad() for evaluation because
+    # both models compute forces via torch.autograd.grad() in forward().
+    # In eval mode, wrappers set create_graph=False/retain_graph=False.
+    def evaluate_loader(self, loader, prefix: str = "val"):
         self.model.eval()
         total_loss = 0.0
         total_e_mae = 0.0
         total_f_mae = 0.0
 
-        for batch in self.val_loader:
+        for batch in loader:
             loss, e_mae, f_mae = self._compute_loss_and_metrics(batch)
             total_loss += loss.item()
             total_e_mae += e_mae
             total_f_mae += f_mae
 
-        n_batches = len(self.val_loader)
+        n_batches = len(loader)
         return {
-            "val_loss": total_loss / n_batches,
-            "val_e_mae": total_e_mae / n_batches,
-            "val_f_mae": total_f_mae / n_batches,
+            f"{prefix}_loss": total_loss / n_batches,
+            f"{prefix}_e_mae": total_e_mae / n_batches,
+            f"{prefix}_f_mae": total_f_mae / n_batches,
         }
+
+    def validate_epoch(self):
+        return self.evaluate_loader(self.val_loader, prefix="val")
+
+    def test_epoch(self, test_loader):
+        return self.evaluate_loader(test_loader, prefix="test")
 
     def train(self, max_epochs: int, patience: int = 10):
         best_val_loss = float("inf")
