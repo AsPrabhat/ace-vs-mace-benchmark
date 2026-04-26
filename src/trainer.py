@@ -35,7 +35,7 @@ class BenchmarkTrainer:
         self.metrics = []
 
     def _compute_loss_and_metrics(self, batch: Data):
-        batch = batch.to(self.device)
+        batch = batch.to(self.device, non_blocking=True)
         preds = self.model(batch)
 
         # Ground truth
