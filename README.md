@@ -12,7 +12,7 @@ The benchmark uses a shared training setup and model-specific architecture param
     - Cutoff Radius: 5.0 A
     - Radial Basis Size: 8
     - Maximum Angular Momentum (l_max): 2
-    - Batch Size: 32
+    - Batch Size: 128
     - Optimizer: AdamW (lr=1e-3, weight_decay=1e-5)
     - LR Schedule: ReduceLROnPlateau (factor=0.5, patience=5)
     - Trainer Schedule: max_epochs=50, early_stopping_patience=10
@@ -21,8 +21,6 @@ The benchmark uses a shared training setup and model-specific architecture param
 - **Model-Specific Architecture**
     - ACE: hidden_dim=32
     - MACE: node_dim=16, num_blocks=2
-
-This repository does not require external API keys for the default workflow.
 
 ### Metrics Tracked
 1. **Training/Validation Accuracy**: Energy MAE (meV/atom) and Force MAE (meV/A).
@@ -35,7 +33,6 @@ This repository does not require external API keys for the default workflow.
 ace-vs-mace-benchmark/
 ├── README.md                      # Comprehensive guide on how to run the project
 ├── requirements.txt               # Dependencies
-├── .env.example                   # Optional external API keys (not required by default)
 ├── data/                          # Cu Molecular Dynamics (MD) trajectory dataset
 ├── src/                           # Modular Python scripts for datasets, model wrappers, and training
 │   ├── dataset.py                 # PyTorch Geometric dataset for extxyz trajectories
