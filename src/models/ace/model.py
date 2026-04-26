@@ -59,6 +59,6 @@ class ACEPotential(nn.Module):
             return site_energies.sum().reshape(1, 1)
         else:
             num_graphs = batch_indices.max().item() + 1
-            total_energy = torch.zeros(num_graphs, 1, device=site_energies.device)
+            total_energy = torch.zeros(num_graphs, 1, dtype=site_energies.dtype, device=site_energies.device)
             total_energy.scatter_add_(0, batch_indices.unsqueeze(-1), site_energies)
             return total_energy

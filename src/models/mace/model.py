@@ -125,7 +125,7 @@ class MACE(nn.Module):
         if hasattr(data, "batch") and data.batch is not None:
             # index_add_ is often faster than scatter() on CPU for this specific reduction
             num_graphs = data.num_graphs if hasattr(data, "num_graphs") else int(data.batch.max() + 1)
-            total_energy = torch.zeros(num_graphs, 1, device=site_energies.device)
+            total_energy = torch.zeros(num_graphs, 1, dtype=site_energies.dtype, device=site_energies.device)
             total_energy.index_add_(0, data.batch, site_energies)
         else:
             total_energy = site_energies.sum(dim=0, keepdim=True)  # (1, 1)

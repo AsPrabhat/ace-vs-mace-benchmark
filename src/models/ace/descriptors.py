@@ -79,7 +79,7 @@ class ACEDescriptor(nn.Module):
 
         # 4. Pool onto CENTER atoms (edge_index[0] = i, the receiver)
         center_nodes = edge_index[0]  # FIX: was edge_index[1] which accumulated onto j
-        A_node = torch.zeros(num_nodes, A_edge.shape[1], device=A_edge.device)
+        A_node = torch.zeros(num_nodes, A_edge.shape[1], dtype=A_edge.dtype, device=A_edge.device)
         A_node.index_add_(0, center_nodes, A_edge)
 
         # 5. B-basis: 3-body invariants via self-tensor-product of A_node
