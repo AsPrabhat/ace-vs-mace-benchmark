@@ -20,7 +20,7 @@ class ACEWrapper(nn.Module):
         self,
         num_elements: int = 120,
         num_radial: int = 8,
-        l_max: int = 3,
+        l_max: int = 2,
         r_cut: float = 5.0,
         hidden_dim: int = 32,
     ):
