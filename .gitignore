@@ -34,3 +34,4 @@ data/*.pt
 data/*.pth
 # Keep the data directory README in version control
 !data/README.md
+data/*.png
