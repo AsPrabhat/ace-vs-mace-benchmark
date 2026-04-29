@@ -39,10 +39,11 @@ ace-vs-mace-benchmark/
 │   ├── models/                    # Fully self-contained local ACE and MACE implementations
 │   └── trainer.py                 # Unified training loop
 └── notebooks/                     # Core workflow
-    ├── 01_Data_Preparation.ipynb  
-    ├── 02_ACE_Training.ipynb      
-    ├── 03_MACE_Training.ipynb     
-    └── 04_Results_Comparison.ipynb 
+    ├── 01_Data_Preparation.ipynb
+    ├── 02_ACE_Training.ipynb
+    ├── 03_MACE_Training.ipynb
+    ├── 04_Inference_Benchmark.ipynb
+    └── 05_Results_Comparison.ipynb
 ```
 
 ## Detailed Setup & Execution Guide
@@ -84,10 +85,11 @@ This will open your default web browser. Navigate to the `notebooks/` directory 
 
 Run the notebooks sequentially to execute the benchmark:
 
-- **`01_Data_Preparation.ipynb`**: Run this first. It generates Cu MD trajectory data with energies and forces and splits it into 1000 train, 200 validation, and 200 test structures in `.extxyz` format.
-- **`02_ACE_Training.ipynb`**: Trains ACE, writes per-epoch metrics to `data/ace_metrics.csv`, and writes held-out test metrics to `data/ace_test_metrics.csv`.
-- **`03_MACE_Training.ipynb`**: Trains MACE, writes per-epoch metrics to `data/mace_metrics.csv`, and writes held-out test metrics to `data/mace_test_metrics.csv`.
-- **`04_Results_Comparison.ipynb`**: Reads train/validation and test CSV outputs and compares validation curves, wall-clock time, and held-out test metrics.
+- **`01_Data_Preparation.ipynb`**: Run this first. It generates Cu MD trajectory data with energies and forces and splits it into multiple training fractions (10%, 40%, 70%, 100%), 200 validation, and 200 test structures in `.extxyz` format.
+- **`02_ACE_Training.ipynb`**: Trains ACE sequentially on the 10%, 40%, 70%, and 100% data fractions to evaluate data scaling. Writes models and metrics to `data/`.
+- **`03_MACE_Training.ipynb`**: Trains MACE sequentially on the 10%, 40%, 70%, and 100% data fractions to evaluate data scaling. Writes models and metrics to `data/`.
+- **`04_Inference_Benchmark.ipynb`**: Measures the forward-pass inference overhead per molecule for both ACE and MACE, outputting `data/inference_metrics.csv`.
+- **`05_Results_Comparison.ipynb`**: Reads all training and inference outputs to generate the final plots: Baseline Error Curves, Data Volume Scaling (Experiment A), and Computational Cost vs Accuracy (Experiment B).
 
 ### 🚀 Performance Tips
 - **Graph Caching**: The dataset pre-computes periodic neighbor graphs once at startup. You will see a progress bar during initialization; this saves minutes of redundant computation during training.
